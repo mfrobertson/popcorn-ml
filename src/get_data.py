@@ -92,6 +92,6 @@ def load_to_sql(ml_type="small"):
 
 
 if __name__ == "__main__":
-    # ml_get("small")
-    # imdb_get()
+    ml_get("small")
+    imdb_get()
     load_to_sql()
