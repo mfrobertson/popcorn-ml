@@ -14,12 +14,14 @@ class TMDB:
         self.wl_json = None
         self.search_json = None
         self.countries = None
+        self.tv_services = None
+        self.movie_services = None
 
-    def check_cache(self, wl=True):
+    def _check_cache(self, wl=True):
         if wl:
             if self.wl_json is None:
                 raise ValueError("wl_json is None")
-        if self.search_json is None:
+        elif self.search_json is None:
             raise ValueError("search_json is None")
 
     def get_countries(self):
@@ -32,22 +34,39 @@ class TMDB:
             self.countries = countries
         return self.countries
 
-    def print_streaming_options(self, country_code="GB", type="flatrate"):
-        self.check_cache()
-        print(f"Printing streaming options for {country_code} of type {type}.")
+    def get_services(self, movies=True):
+        if self.movie_services is None:
+            print("GET TV services from TMDB")
+            req = requests.get(f"https://api.themoviedb.org/3/watch/providers/movie?api_key={self.API_KEY}")
+            self.movie_services = [service["provider_name"] for service in req.json()["results"]]
+        if self.tv_services is None:
+            print("GET TV services from TMDB")
+            req = requests.get(f"https://api.themoviedb.org/3/watch/providers/tv?api_key={self.API_KEY}")
+            self.tv_services = [service["provider_name"] for service in req.json()["results"]]
+        if movies:
+            return self.movie_services
+        return self.tv_services
+
+    def get_streaming_options(self, country_code="GB", type="flatrate"):
+        self._check_cache()
         try:
             res = self.wl_json["results"][country_code][type]
         except KeyError:
-            print(f"No available streaming options for {type} in {country_code}.")
-            return
+            return None
+        return res
+
+    def print_streaming_options(self, country_code="GB", type="flatrate"):
+        print(f"Printing streaming options for {country_code} of type {type}.")
+        res = self.get_streaming_options(country_code=country_code, type=type)
+        if not res: print(f"No available streaming options for {type} in {country_code}.")
         for service in res:
             print(service['provider_name'])
 
-    def print_country_options(self, type="flatrate", provider="Netflix"):
-        self.check_cache()
-        print(f"Printing country options for {provider} of type {type}.")
+    def get_country_options(self, type="flatrate", provider="Netflix"):
+        self._check_cache()
         if self.countries is None:
             self.get_countries()
+        avail_codes = []
         for country_code in self.countries:
             try:
                 res = self.wl_json["results"][country_code][type]
@@ -55,14 +74,20 @@ class TMDB:
                 continue
             for service in res:
                 if service["provider_name"] == provider:
-                    print(f"{self.countries[country_code]}")
+                    avail_codes.append(country_code)
+        return avail_codes
+
+    def print_country_options(self, type="flatrate", provider="Netflix"):
+        print(f"Printing country options for {provider} of type {type}.")
+        avail_codes = self.get_country_options(type=type, provider=provider)
+        for code in avail_codes:
+            print(f"{self.countries[code]}")
 
     def get_watch_list(self, tmdb_id, media_type=None):
         media_type = media_type or self.media_type
         print(f"GET watch_list from TMDB for {media_type} id: {tmdb_id}")
         req = requests.get(f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/watch/providers?api_key={self.API_KEY}")
         self.wl_json = req.json()
-        print(self.wl_json)
         return self.wl_json
 
     def get_search(self, query, media_type=None, language=None):
@@ -74,7 +99,7 @@ class TMDB:
         return self.search_json
 
     def print_search_results(self):
-        self.check_cache(False)
+        self._check_cache(False)
         for res in self.search_json["results"]:
             try:
                 print(res["id"], res["title"], res["media_type"])
