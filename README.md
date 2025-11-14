@@ -1,3 +1,3 @@
 # popcorn-ml
-## Live App
-👉 https://where-to-stream.streamlit.app
+:w## Live App
+👉 [where-to-stream](https://where-to-stream.streamlit.app)
