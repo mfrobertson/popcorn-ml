@@ -16,6 +16,8 @@ class TMDB:
         self.countries = None
         self.tv_services = None
         self.movie_services = None
+        self.query = None
+        self.tmdb_id = None
 
     def _check_cache(self, wl=True):
         if wl:
@@ -34,18 +36,32 @@ class TMDB:
             self.countries = countries
         return self.countries
 
+    def _get_services(self, req, priority=10, lower=False):
+        res = req.json()["results"]
+        if lower:
+            return [service["provider_name"].lower() for service in res if service["display_priority"] < priority]
+        return [service["provider_name"] for service in res if service["display_priority"] < priority]
+
     def get_services(self, movies=True):
         if self.movie_services is None:
             print("GET TV services from TMDB")
             req = requests.get(f"https://api.themoviedb.org/3/watch/providers/movie?api_key={self.API_KEY}")
-            self.movie_services = [service["provider_name"] for service in req.json()["results"]]
+            self.movie_services = self._get_services(req)
         if self.tv_services is None:
             print("GET TV services from TMDB")
             req = requests.get(f"https://api.themoviedb.org/3/watch/providers/tv?api_key={self.API_KEY}")
-            self.tv_services = [service["provider_name"] for service in req.json()["results"]]
+            self.tv_services = self._get_services(req)
         if movies:
             return self.movie_services
         return self.tv_services
+
+    def get_all_services(self):
+        req = requests.get(f"https://api.themoviedb.org/3/watch/providers/movie?api_key={self.API_KEY}")
+        movie_services = self._get_services(req, 1000, True)
+        req = requests.get(f"https://api.themoviedb.org/3/watch/providers/tv?api_key={self.API_KEY}")
+        tv_services = self._get_services(req, 1000, True)
+        movie_services.extend(tv_services)
+        return sorted(list(set(movie_services)))
 
     def get_streaming_options(self, country_code="GB", type="flatrate"):
         self._check_cache()
@@ -73,7 +89,7 @@ class TMDB:
             except KeyError:
                 continue
             for service in res:
-                if service["provider_name"] == provider:
+                if service["provider_name"].lower() == provider.lower():
                     avail_codes.append(country_code)
         return avail_codes
 
@@ -85,17 +101,25 @@ class TMDB:
 
     def get_watch_list(self, tmdb_id, media_type=None):
         media_type = media_type or self.media_type
+        if tmdb_id == self.tmdb_id and media_type == self.media_type:
+            return self.wl_json
         print(f"GET watch_list from TMDB for {media_type} id: {tmdb_id}")
         req = requests.get(f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}/watch/providers?api_key={self.API_KEY}")
         self.wl_json = req.json()
+        self.tmdb_id = tmdb_id
         return self.wl_json
 
     def get_search(self, query, media_type=None, language=None):
-        print(f"GET results from TMDB for query: {query}")
         media_type = media_type or self.media_type
         language = language or self.language
+        if query == self.query and media_type == self.media_type and language == self.language:
+            return self.search_json
+        print(f"GET results from TMDB for query: {query}")
         req = requests.get(f"https://api.themoviedb.org/3/search/{media_type}?api_key={self.API_KEY}&query={query}&language={language}")
         self.search_json = req.json()
+        self.media_type = media_type
+        self.language = language
+        self.query = query
         return self.search_json
 
     def print_search_results(self):

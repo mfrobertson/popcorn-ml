@@ -1,14 +1,14 @@
 import streamlit as st
-
 from tmdb import TMDB
 
 if "tmdb" not in st.session_state:
     st.session_state.tmdb = TMDB(media_type="movie")
+    if not st.session_state.tmdb.API_KEY:
+        st.session_state.tmdb.API_KEY = st.secrets.get("TMDB_KEY")
 
 def update_media_type():
     media_type = "movie" if st.session_state.is_movie else "tv"
     st.session_state.media_type = media_type
-    st.session_state.tmdb.media_type = media_type
 
 if "is_movie" not in st.session_state:
     st.session_state.is_movie = True
@@ -19,11 +19,14 @@ if "media_type" not in st.session_state:
 if "search" not in st.session_state:
     st.session_state.search = None
 
-if "service" not in st.session_state:
-    st.session_state.service = None
+if "services" not in st.session_state:
+    st.session_state.services = []
 
 if "country" not in st.session_state:
     st.session_state.country = None
+
+if "trigger_toast" not in st.session_state:
+    st.session_state.trigger_toast = False
 
 def display_image_with_hover(image_url, hover_text):
     html = f"""
@@ -85,18 +88,25 @@ def cache_countries():
 def cache_service():
     movie_services = _tmdb.get_services()
     tv_services = _tmdb.get_services(False)
-    return set(movie_services), set(tv_services)
+    all_services = _tmdb.get_all_services()
+    return all_services, sorted(list(set(movie_services))), sorted(list(set(tv_services)))
+
+def trigger_toast():
+    st.session_state.trigger_toast = True
 
 @ st.fragment()
 def movie_search():
     with st.container():
         movie_str = "Movie" if st.session_state.is_movie else "TV Show"
         st.text_input(f"Search for {movie_str}", key="search")
-        st.toggle("Movie", key="is_movie")
+        st.toggle("Movie", key="is_movie", on_change=trigger_toast)
+        if st.session_state.trigger_toast:
+            st.toast(f"Switching to {movie_str}'s")
+            st.session_state.trigger_toast = False
         update_media_type()
         submit_button = st.button(label="Submit")
         if submit_button or st.session_state.search:
-            _tmdb.get_search(st.session_state.search)
+            _tmdb.get_search(st.session_state.search, st.session_state.media_type)
             display_movie_results(movie_str)
 
 @st.fragment()
@@ -124,7 +134,7 @@ def display_info(search_res):
         size = "original"
         size = "w500"
         st.image(
-            f"https://image.tmdb.org/t/p/{size}/{search_res[st.session_state.movie_index]["poster_path"]}.png?api_key={_tmdb.API_KEY}", use_container_width=True)
+            f"https://image.tmdb.org/t/p/{size}/{search_res[st.session_state.movie_index]["poster_path"]}.png?api_key={_tmdb.API_KEY}", width="stretch")
     with col2:
         st.write(search_res[st.session_state.movie_index]["overview"])
         if not st.session_state.is_movie:
@@ -134,7 +144,7 @@ def display_info(search_res):
 
 @st.fragment()
 def display_countries_and_services():
-    _tmdb.get_watch_list(_tmdb.search_json["results"][st.session_state.movie_index]["id"])
+    _tmdb.get_watch_list(_tmdb.search_json["results"][st.session_state.movie_index]["id"], st.session_state.media_type)
     col1, col2 = st.columns(2)
     with col1:
         get_servicies()
@@ -152,9 +162,14 @@ def get_streaming_options(country_code, type="subscription"):
         return services_free
     return _tmdb.get_streaming_options(country_code, type)
 
+def get_countries_index():
+    if st.session_state.country:
+        return countries_sorted.index(st.session_state.country)
+    return None
+
 @st.fragment()
 def get_servicies():
-    st.selectbox("Select country", countries_sorted, key="country", accept_new_options=False, placeholder="Select country")
+    st.selectbox("Select country", countries_sorted, key="country", accept_new_options=False, placeholder="Type country", index=get_countries_index())
     country = st.session_state.country
     if country:
         country_code = list(country_dict.keys())[countries.index(st.session_state.country)]
@@ -162,6 +177,8 @@ def get_servicies():
         if services:
             for service in services:
                 display_image_with_hover(f"https://image.tmdb.org/t/p/original/{service['logo_path']}.png?api_key={_tmdb.API_KEY}", service["provider_name"])
+        else:
+            st.write(f"No services show {st.session_state.search} in {country}.")
 
 def get_country_options(service, type="subscription"):
     if type == "subscription":
@@ -174,19 +191,39 @@ def get_country_options(service, type="subscription"):
         return codes_free
     return _tmdb.get_country_options(provider=service, type=type)
 
+def get_services_index(services):
+    if st.session_state.service:
+        return services.index(st.session_state.service)
+    return None
+
 @st.fragment()
 def get_countries():
-    services = movie_services if st.session_state.is_movie else tv_services
-    st.selectbox("Select service", services, key="service", accept_new_options=False, placeholder="Select service")
-    service = st.session_state.service
-    if service:
-        codes = get_country_options(service)
-        for code in codes:
-            display_image_with_hover(f"https://flagcdn.com/40x30/{code.lower()}.png", country_dict[code])
+    select_services = movie_services if st.session_state.is_movie else tv_services
+    st.multiselect("Select service", select_services, key="services", accept_new_options=True, placeholder="Type service", default=None, max_selections=4)
+    services = st.session_state.services
+    if services:
+        cols = st.columns(len(services))
+        for iii, service in enumerate(services):
+            if service.lower() not in all_services:
+                st.write(f"Streaming service {service} does not exist.")
+                continue
+            with cols[iii]:
+                st.write(f"{service}: ")
+                codes = get_country_options(service)
+                for code in codes:
+                    display_image_with_hover(f"https://flagcdn.com/108x81/{code.lower()}.png", country_dict[code])
+                if not codes:
+                    st.write(f"No countries show {st.session_state.search} on {service}.")
 
-
+st.set_page_config(page_title="Where to Stream", page_icon="🎬")
 _tmdb = st.session_state.tmdb
 country_dict, countries, countries_sorted = cache_countries()
-movie_services, tv_services = cache_service()
+all_services, movie_services, tv_services = cache_service()
 with st.container(border=True):
     movie_search()
+
+with st.expander("Data Attributions"):
+    st.write("This product uses the TMDB API but is not endorsed or certified by [TMDB](%s)." % "https://www.themoviedb.org/")
+    st.image("https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg")
+    st.write("Streaming availability data provided by [Justwatch](%s)." % "https://www.justwatch.com")
+    st.image("https://www.justwatch.com/appassets/img/logo/JustWatch-logo-large.png")

@@ -1,0 +1,7 @@
+[theme]
+base = "dark"
+primaryColor = "#01b4e4"          # TMDB blue accent
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1E222A"
+textColor = "#FAFAFA"
+font = "sans serif"
