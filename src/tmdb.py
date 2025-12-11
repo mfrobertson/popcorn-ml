@@ -7,15 +7,17 @@ import sys
 class TMDB:
 
     def __init__(self, media_type="movie", language="en"):
-        load_dotenv("../src/key.env")
+        load_dotenv("_keys/key.env")
         self.API_KEY = os.getenv("TMDB_KEY")
         self.media_type = media_type
         self.language = language
         self.wl_json = None
         self.search_json = None
         self.countries = None
-        self.tv_services = None
+        self.cc = "US"
         self.movie_services = None
+        self.tv_services = None
+        self.all_services = None
         self.query = None
         self.tmdb_id = None
 
@@ -36,11 +38,12 @@ class TMDB:
             self.countries = countries
         return self.countries
 
-    def _get_services(self, req, priority=10, lower=False):
+    def _get_services(self, req, local=True):
+        local_priority = 50
         res = req.json()["results"]
-        if lower:
-            return [service["provider_name"].lower() for service in res if service["display_priority"] < priority]
-        return [service["provider_name"] for service in res if service["display_priority"] < priority]
+        if local:
+            return [service["provider_name"] for service in res if service["display_priorities"].get(self.cc) and service["display_priorities"].get(self.cc) < local_priority]
+        return [service["provider_name"].lower() for service in res]
 
     def get_services(self, movies=True):
         if self.movie_services is None:
@@ -57,11 +60,10 @@ class TMDB:
 
     def get_all_services(self):
         req = requests.get(f"https://api.themoviedb.org/3/watch/providers/movie?api_key={self.API_KEY}")
-        movie_services = self._get_services(req, 1000, True)
+        all_movie_services_json = req.json()["results"]
         req = requests.get(f"https://api.themoviedb.org/3/watch/providers/tv?api_key={self.API_KEY}")
-        tv_services = self._get_services(req, 1000, True)
-        movie_services.extend(tv_services)
-        return sorted(list(set(movie_services)))
+        all_tv_services_json = req.json()["results"]
+        return all_movie_services_json, all_tv_services_json
 
     def get_streaming_options(self, country_code="GB", type="flatrate"):
         self._check_cache()
