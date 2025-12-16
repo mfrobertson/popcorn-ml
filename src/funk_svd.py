@@ -240,11 +240,15 @@ class FunkSVD:
         return self
 
     def predict(self, user_id, item_id) -> float:
-        """Predict a rating for a user_id, item_id seen during training."""
+        """Predict a rating for a user_id, item_id seen during training. If not seen in training, return biased means"""
         if self.user_to_idx_ is None:
             raise RuntimeError("Model not fitted. Call fit() first.")
-        if user_id not in self.user_to_idx_ or item_id not in self.item_to_idx_:
-            raise ValueError("Unknown user_id or item_id (cold-start not handled in this minimal class).")
+        if user_id not in self.user_to_idx_:
+            if item_id not in self.item_to_idx_:
+                return self.mu_
+            return self.mu_ + self.bi_[self.item_to_idx_[item_id]]
+        if item_id not in self.item_to_idx_:
+            return self.mu_ + self.bu_[self.user_to_idx_[user_id]]
 
         u = self.user_to_idx_[user_id]
         i = self.item_to_idx_[item_id]
