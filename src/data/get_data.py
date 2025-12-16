@@ -7,7 +7,7 @@ import os
 import sqlite3
 import pandas as pd
 
-DATA_PATH = "../data/"
+DATA_PATH = "../../data/"
 IMDB_EXT = "imdb"
 ML_EXT = "ml"
 
