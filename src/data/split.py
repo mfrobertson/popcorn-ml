@@ -23,9 +23,7 @@ def random_split():
     return None, None, None
 
 def split_by_col(db_name, config):
-    train_rows = np.array([], dtype=int)
-    test_rows = np.array([], dtype=int)
-    val_rows = np.array([], dtype=int)
+    rows = [[],[],[]]
 
     df_data = import_df(db_name, config)
 
@@ -39,16 +37,12 @@ def split_by_col(db_name, config):
         n_train = int(np.floor(n_ratings * train_frac))
         n_test = int(np.floor(n_ratings * test_frac))
 
-        train_rows = np.append(train_rows, np.arange(index, index + n_train))
-        test_rows = np.append(test_rows, np.arange(index + n_train, index + n_train + n_test))
-        val_rows = np.append(val_rows, np.arange(index + n_train + n_test, index + n_ratings))
+        rows[0].extend(range(index, index + n_train))
+        rows[1].extend(range(index + n_train, index + n_train + n_test))
+        rows[2].extend(range(index + n_train + n_test, index + n_ratings))
 
         index += n_ratings
-
-    df_train = df_data.iloc[train_rows].copy()
-    df_test = df_data.iloc[test_rows].copy()
-    df_val = df_data.iloc[val_rows].copy()
-    return df_train, df_test, df_val
+    return [df_data.iloc[row].copy() for row in rows]
 
 def ensure_present_all_sets(dfs, config):
     print("Ensure present all sets not yet implemented.")
