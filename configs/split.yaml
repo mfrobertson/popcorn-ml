@@ -1,0 +1,8 @@
+ml-small:
+  ratios:
+    train: 80
+    test: 10
+    val: 10
+  split_by: 'userId'
+  present_all_sets: ['userId', 'movieId']
+  sql_query: 'SELECT userId, movieId, rating, timestamp FROM ratings ORDER BY userId ASC, timestamp ASC'
