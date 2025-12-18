@@ -68,12 +68,12 @@ def load_to_sql(name):
             return filename, file_type
 
         for file in os.listdir(dir_path):
-            filename, file_type = filename_type(file)
+            tablename, file_type = filename_type(file)
             try: sep = get_sep(file_type)
             except: continue
-            print("  Processing " + filename)
+            print("  Processing " + tablename)
             df = pd.read_csv(os.path.join(dir_path, file), sep=sep, header=0)
-            df.to_sql(filename, db, if_exists="replace", index=False, chunksize=10000, method="multi")
+            df.to_sql(tablename, db, if_exists="replace", index=False, chunksize=10000, method="multi")
 
     sql_dir = os.path.join(DATA_PATH, SQL_EXT)
     data_dir = os.path.join(DATA_PATH, name)
