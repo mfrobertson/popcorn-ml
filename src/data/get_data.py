@@ -6,8 +6,9 @@ import shutil
 import os
 import sqlite3
 import pandas as pd
+import src
 
-DATA_PATH = "../../data/"
+DATA_PATH = src.data_path
 IMDB_EXT = "imdb"
 ML_EXT = "ml"
 

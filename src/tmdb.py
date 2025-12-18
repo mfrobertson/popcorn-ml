@@ -2,12 +2,12 @@ import os
 from dotenv import load_dotenv
 import requests
 import sys
-
+import src
 
 class TMDB:
 
     def __init__(self, media_type="movie", language="en"):
-        load_dotenv("_keys/key.env")
+        load_dotenv(f"{src.keys_path}/key.env")
         self.API_KEY = os.getenv("TMDB_KEY")
         self.media_type = media_type
         self.language = language
