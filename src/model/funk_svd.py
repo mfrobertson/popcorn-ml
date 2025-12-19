@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from numba import njit
 
 class FunkSVD:
     """
@@ -175,6 +176,28 @@ class FunkSVD:
         shuffle: bool = True,
         verbose: bool = False,
     ):
+        @njit()
+        def rating_loop(order, u_idx, i_idx, r, mu_, bu_, bi_, P_, Q_, lr, reg):
+            for t in order:
+                u = u_idx[t]
+                i = i_idx[t]
+                r_ui = r[t]
+
+                # prediction
+                pred = mu_ + bu_[u] + bi_[i] + float(P_[u] @ Q_[i])
+                err = r_ui - pred
+
+                # cache old vectors for simultaneous update
+                pu = P_[u].copy()
+                qi = Q_[i].copy()
+
+                # SGD updates (L2 regularisation)
+                bu_[u] += lr * (err - reg * bu_[u])
+                bi_[i] += lr * (err - reg * bi_[i])
+                P_[u]  += lr * (err * qi - reg * pu)
+                Q_[i]  += lr * (err * pu - reg * qi)
+            return mu_, bu_, bi_, P_, Q_, lr, reg
+
         rng = np.random.default_rng(self.random_state)
 
         users = df[user_col].unique()
@@ -208,24 +231,7 @@ class FunkSVD:
             if shuffle:
                 rng.shuffle(order)
 
-            for t in order:
-                u = u_idx[t]
-                i = i_idx[t]
-                r_ui = r[t]
-
-                # prediction
-                pred = self.mu_ + self.bu_[u] + self.bi_[i] + float(self.P_[u] @ self.Q_[i])
-                err = r_ui - pred
-
-                # cache old vectors for simultaneous update
-                pu = self.P_[u].copy()
-                qi = self.Q_[i].copy()
-
-                # SGD updates (L2 regularisation)
-                self.bu_[u] += self.lr * (err - self.reg * self.bu_[u])
-                self.bi_[i] += self.lr * (err - self.reg * self.bi_[i])
-                self.P_[u]  += self.lr * (err * qi - self.reg * pu)
-                self.Q_[i]  += self.lr * (err * pu - self.reg * qi)
+            rating_loop(order, u_idx, i_idx, r, self.mu_, self.bu_, self.bi_, self.P_, self.Q_, self.lr, self.reg)
 
             if verbose:
                 # quick training RMSE estimate (on train)
