@@ -28,45 +28,86 @@ def split_by_col(db_name, config):
     df_data = import_df(db_name, config)
 
     train_frac = config["ratios"]["train"]
-    test_frac = config["ratios"]["test"]
-    split_col = config["split_by"]
+    val_frac = config["ratios"]["val"]
+    split_col = config["split_by_group"]["col"]
 
-    index = 0
     for _, group in df_data.groupby(split_col):
         n_ratings = len(group)
         n_train = int(np.floor(n_ratings * train_frac))
-        n_test = int(np.floor(n_ratings * test_frac))
+        n_val = int(np.floor(n_ratings * val_frac))
 
+        index = group.index[0]
         rows[0].extend(range(index, index + n_train))
-        rows[1].extend(range(index + n_train, index + n_train + n_test))
-        rows[2].extend(range(index + n_train + n_test, index + n_ratings))
+        rows[1].extend(range(index + n_train, index + n_train + n_val))
+        rows[2].extend(range(index + n_train + n_val, index + n_ratings))
 
-        index += n_ratings
     return [df_data.iloc[row].copy() for row in rows]
 
 def ensure_present_all_sets(dfs, config):
-    print("Ensure present all sets not yet implemented.")
+    pas_cols = config["present_all_sets"]["cols"]
+
+    val_to_train = []
+    test_to_train = []
+    test_to_val = []
+    for col in pas_cols:
+        for groupId, group in dfs[1].groupby(col):
+            n_ratings = len(group)
+            if groupId not in dfs[0][col].values:
+                print(f"{col}: {groupId} not in train set. n-ratings: {n_ratings}")
+                index = group.index[0]
+                val_to_train.append(index)
+        for groupId, group in dfs[2].groupby(col):
+            n_ratings = len(group)
+            train_append = False
+            if groupId not in dfs[0][col].values:
+                print(f"{col}: {groupId} not in train set. n-ratings: {n_ratings}")
+                index = group.index[0]
+                test_to_train.append(index)
+                train_append = True
+            if groupId not in dfs[1][col].values:
+                print(f"{col}: {groupId} not in val set. n-ratings: {n_ratings}")
+                if not train_append:
+                    index = group.index[0]
+                elif n_ratings > 1:
+                    index = group.index[1]
+                else:
+                    continue
+                test_to_val.append(index)
+    dfs[0] = pd.concat([dfs[0], dfs[1].loc[val_to_train], dfs[2].loc[test_to_train]])
+    dfs[1] = pd.concat([dfs[1], dfs[2].loc[test_to_val]])
+    dfs[1].drop(val_to_train, inplace=True)
+    test_to_train.extend(test_to_val)
+    dfs[2].drop(test_to_train, inplace=True)
     return dfs
 
 def split_data(db_name):
     config = split_config[db_name]
-    if config["split_by"]:
+    if config["split_by_group"]["active"]:
         dfs = split_by_col(db_name, config)
     else:
         dfs = random_split()
 
-    if config["present_all_sets"]:
+    if config["present_all_sets"]["active"]:
         dfs = ensure_present_all_sets(dfs, config)
     return dfs
 
-def save_splits(data_dir, df_train, df_test, df_val):
+def save_splits(data_dir, df_train, df_val, df_test):
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     df_train.to_csv(os.path.join(data_dir, "train.csv"), index=False)
-    df_test.to_csv(os.path.join(data_dir, "test.csv"), index=False)
     df_val.to_csv(os.path.join(data_dir, "val.csv"), index=False)
+    df_test.to_csv(os.path.join(data_dir, "test.csv"), index=False)
+
+def check_config(db_name):
+    assert db_name in split_config
+    config = split_config[db_name]
+    assert sum(config["ratios"].values()) == 1
+    keys = ["split_by_group", "present_all_sets", "sql_query"]
+    for key in keys:
+        assert key in config
 
 def main(db_name):
+    check_config(db_name)
     split_dir = os.path.join(data_dir, "splits")
     save_splits(split_dir, *split_data(db_name))
     pass
