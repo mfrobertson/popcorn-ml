@@ -46,26 +46,31 @@ def split_by_col(db_name, config):
 def ensure_present_all_sets(dfs, config):
     pas_cols = config["present_all_sets"]["cols"]
 
+    train_df = dfs[0]
+    val_df = dfs[1]
+    test_df = dfs[2]
+
     val_to_train = []
     test_to_train = []
     test_to_val = []
     for col in pas_cols:
-        for groupId, group in dfs[1].groupby(col):
-            n_ratings = len(group)
-            if groupId not in dfs[0][col].values:
-                print(f"{col}: {groupId} not in train set. n-ratings: {n_ratings}")
+        for groupId, group in val_df.groupby(col):
+            if groupId not in train_df[col].values:
                 index = group.index[0]
                 val_to_train.append(index)
-        for groupId, group in dfs[2].groupby(col):
+    train_df = pd.concat([train_df, val_df.loc[val_to_train]])
+    print(f"Moved {len(val_to_train)} ratings to train from val.")
+    val_df.drop(val_to_train, inplace=True)
+
+    for col in pas_cols:
+        for groupId, group in test_df.groupby(col):
             n_ratings = len(group)
             train_append = False
-            if groupId not in dfs[0][col].values:
-                print(f"{col}: {groupId} not in train set. n-ratings: {n_ratings}")
+            if groupId not in train_df[col].values:
                 index = group.index[0]
                 test_to_train.append(index)
                 train_append = True
-            if groupId not in dfs[1][col].values:
-                print(f"{col}: {groupId} not in val set. n-ratings: {n_ratings}")
+            if groupId not in val_df[col].values:
                 if not train_append:
                     index = group.index[0]
                 elif n_ratings > 1:
@@ -73,9 +78,10 @@ def ensure_present_all_sets(dfs, config):
                 else:
                     continue
                 test_to_val.append(index)
-    dfs[0] = pd.concat([dfs[0], dfs[1].loc[val_to_train], dfs[2].loc[test_to_train]])
-    dfs[1] = pd.concat([dfs[1], dfs[2].loc[test_to_val]])
-    dfs[1].drop(val_to_train, inplace=True)
+    dfs[0] = pd.concat([train_df, test_df.loc[test_to_train]])
+    dfs[1] = pd.concat([val_df, test_df.loc[test_to_val]])
+    print(f"Moved {len(test_to_train)} ratings to train from test.")
+    print(f"Moved {len(test_to_val)} ratings to val from test.")
     test_to_train.extend(test_to_val)
     dfs[2].drop(test_to_train, inplace=True)
     return dfs
