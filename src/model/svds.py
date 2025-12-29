@@ -61,19 +61,18 @@ class SVDs:
         self.P_ = U[:, idx] @ np.sqrt(Sig)
         self.Q_ = V_t[idx, :].transpose() @ np.sqrt(Sig)
 
-    def predict(self, user_id, item_id, exists=True) -> float:
+    def predict(self, user_id, item_id, must_exist=True) -> float:
         if self.user_to_idx_ is None:
             raise RuntimeError("Model not fitted. Call fit() first.")
-        if user_id not in self.user_to_idx_:
-            if exists:
-                raise KeyError(f"{user_id} not in user_to_idx_.")
-            if item_id not in self.item_to_idx_:
-                return self.mu_
-            return self.avg_rating_by_item_[item_id]
         if item_id not in self.item_to_idx_:
-            if exists:
+            if must_exist:
                 raise KeyError(f"{item_id} not in item_to_idx_.")
             return self.mu_
+        if user_id not in self.user_to_idx_:
+            if must_exist:
+                raise KeyError(f"{user_id} not in user_to_idx_.")
+            return self.avg_rating_by_item_[item_id]
+
         user_idx = self.user_to_idx_[user_id]
         item_idx = self.item_to_idx_[item_id]
 
