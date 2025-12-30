@@ -114,7 +114,7 @@ def check_config(db_name):
 
 def main(db_name):
     check_config(db_name)
-    split_dir = os.path.join(data_dir, "splits")
+    split_dir = os.path.join(data_dir, "splits", db_name)
     save_splits(split_dir, *split_data(db_name))
     pass
 
