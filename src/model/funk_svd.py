@@ -167,6 +167,10 @@ class FunkSVD:
         self.idx_to_user_ = None
         self.idx_to_item_ = None
 
+        self.user_col = None
+        self.item_col = None
+        self.rating_col = None
+
     def fit(
         self,
         df: pd.DataFrame,
@@ -199,6 +203,10 @@ class FunkSVD:
             return mu_, bu_, bi_, P_, Q_, lr, reg
 
         rng = np.random.default_rng(self.random_state)
+
+        self.user_col = user_col
+        self.item_col = item_col
+        self.rating_col = rating_col
 
         users = df[user_col].unique()
         items = df[item_col].unique()

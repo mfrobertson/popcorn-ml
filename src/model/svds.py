@@ -21,6 +21,10 @@ class SVDs:
         self.avg_rating_by_item_ = None
         self.mu_ = None
 
+        self.user_col = None
+        self.item_col = None
+        self.rating_col = None
+
 
 
     def fit(self, df: pd.DataFrame,
@@ -28,6 +32,10 @@ class SVDs:
         item_col: str = "item_id",
         rating_col: str = "rating",
     ):
+
+        self.user_col = user_col
+        self.item_col = item_col
+        self.rating_col = rating_col
 
         users = df[user_col].unique()
         items = df[item_col].unique()
