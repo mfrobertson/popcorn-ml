@@ -1,0 +1,36 @@
+ml-small:
+  user_col: "userId"
+  item_col: "movieId"
+  rating_col: "rating"
+  SVDs:
+    k:
+      tune: true
+      min: 1
+      max: 40
+      step_size: 1
+  FunkSVD:
+    n_factors:
+      tune: true
+      min: 1
+      max: 40
+      step_size: 1
+      default: 20
+    reg:
+      tune: true
+      min: 0.005
+      max: 0.1
+      step_size: 0.005
+      default: 0.02
+    lr:
+      tune: true
+      min: 0.005
+      max: 0.1
+      step_size: 0.005
+      default: 0.01
+    n_epochs:
+      tune: true
+      min: 10
+      max: 100
+      step_size: 5
+      default: 30
+
