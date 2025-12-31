@@ -119,4 +119,5 @@ def main(db_name):
     pass
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    db_name = sys.argv[1]
+    main(db_name)
