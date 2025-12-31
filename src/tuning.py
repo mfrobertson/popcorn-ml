@@ -83,7 +83,7 @@ def find_best_param(params, RMSEs, tol=2e-3, select_min=True):
     best_params = params_sorted[np.where(np.abs(RMSEs_sorted - RMSEs_sorted[0])/RMSEs_sorted[0] < tol)]
     return func(best_params)
 
-def main(db_name, model_name, parameter, select_min, **kwargs):
+def main(db_name, model_name, parameter, tol=2e-3, select_min=True, **kwargs):
     run_path = os.path.join(tune_path, db_name, model_name, parameter)
     log("---------------------------------", run_path)
     log(f"db: {db_name}, model: {model_name}, parameter: {parameter}, and kwargs: {kwargs}", run_path)
@@ -111,7 +111,7 @@ def main(db_name, model_name, parameter, select_min, **kwargs):
     np.save(os.path.join(run_path, "rmses.npy"), RMSEs)
     np.save(os.path.join(run_path, "params.npy"), params)
 
-    best_param = find_best_param(params, RMSEs, select_min=select_min)
+    best_param = find_best_param(params, RMSEs, tol, select_min)
     log(f"Best value for parameter: {parameter} = {best_param}", run_path)
 
     log("---------------------------------", run_path)
@@ -128,7 +128,7 @@ def main(db_name, model_name, parameter, select_min, **kwargs):
 
 
 if __name__ == '__main__':
-    n_req_args = 4
+    n_req_args = 3
     args = sys.argv[1:n_req_args+1]
     kwargs = dict(arg.split('=') for arg in sys.argv[n_req_args+1:])
     main(*args, **kwargs)
