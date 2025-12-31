@@ -1,12 +1,14 @@
-import sqlite3
+import datetime
 import os
 import numpy as np
 import pandas as pd
 import src
 import yaml
+import sys
 
 
 data_path = src.data_path
+tune_path = src.tune_path
 splits_path = os.path.join(data_path, "splits")
 
 config_dir = src.config_path
@@ -46,14 +48,37 @@ def import_Model(model_name):
         raise ValueError(f"{model_name} is not a valid model name.")
     return Model
 
+def str_to_num(s):
+    try:
+        f = float(s)
+        # Check if the float value is an integer (e.g., 12.0)
+        if f.is_integer():
+            return int(f)
+        else:
+            return f
+    except ValueError:
+        # If float conversion fails, it's not a valid number string
+        return s
+
 def get_model_keywords(db_name, model_name, **kwargs):
     kw_default = {param: tune_config[db_name][model_name][param]["default"] for param in tune_config[db_name][model_name]}
     for key, value in kwargs.items():
-        kw_default[key] = value
+        kw_default[key] = str_to_num(value)
     return kw_default
 
+def log(message, dir_):
+    if not os.path.isdir(dir_):
+        os.makedirs(dir_)
+    file_path = os.path.join(dir_, "log.out")
+    f = open(file_path, "a")
+    f.write("[" + str(datetime.datetime.now()) + "] " + message + "\n")
+    f.close()
 
 def main(db_name, model_name, parameter, **kwargs):
+    run_path = os.path.join(tune_path, db_name, model_name, parameter)
+    log("---------------------------------", run_path)
+    log(f"db: {db_name}, model: {model_name}, parameter: {parameter}, and kwargs: {kwargs}", run_path)
+
     df_train, df_val = get_data(db_name)
     params = get_params(db_name, model_name, parameter)
     Model = import_Model(model_name)
@@ -63,11 +88,23 @@ def main(db_name, model_name, parameter, **kwargs):
     item_col = tune_config[db_name]["item_col"]
     rating_col = tune_config[db_name]["rating_col"]
 
-    for param in params:
+    log(f"Parameters: {model_kw}", run_path)
+    log(f"Grid for parameter: {parameter} = {params}", run_path)
+    RMSEs = np.zeros(np.size(params))
+    for iii, param in enumerate(params):
+        log(f"  Parameter: {parameter} = {param}", run_path)
         model_kw[parameter] = param
         model = Model(**model_kw)
         model.fit(df_train, user_col=user_col, item_col=item_col, rating_col=rating_col)
-        print(param, RMSE(model, df_val))
+        RMSEs[iii] = RMSE(model, df_val)
+        log(f"  RMSE: {RMSEs[iii]}", run_path)
+
+    np.save(os.path.join(run_path, "rmses.npy"), RMSEs)
+    np.save(os.path.join(run_path, "params.npy"), params)
+    log("---------------------------------", run_path)
+
 
 if __name__ == '__main__':
-    main("ml-small", "FunkSVD", "n_factors", lr=0.005)
+    args = sys.argv[1:4]
+    kwargs = dict(arg.split('=') for arg in sys.argv[4:])
+    main(*args, **kwargs)
