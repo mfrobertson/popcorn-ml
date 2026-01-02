@@ -171,6 +171,10 @@ class FunkSVD:
         self.item_col = None
         self.rating_col = None
 
+        # New user data
+        self.m_0 = 20
+        self.w = None
+
     def fit(
         self,
         df: pd.DataFrame,
@@ -253,6 +257,40 @@ class FunkSVD:
 
         return self
 
+    def add_new_user(self, items, ratings):
+        m = np.size(ratings)
+        item_idxs = [self.item_to_idx_[item] for item in items]
+
+        targets = ratings - self.mu_ - self.bi_[item_idxs]
+        Q_ = self.Q_.copy()[item_idxs]
+        X = np.insert(Q_, 0, 1, axis=1) # Adding additional element to fit for item bias
+
+        lambda_ = self.reg * self.m_0/m
+        lambda_b = lambda_
+        lambdas = np.ones(self.n_factors) * lambda_
+        lambdas = np.insert(lambdas, 0, lambda_b)
+        Lambda = np.diag(lambdas)
+
+        self.w = np.linalg.inv(X.T @ X + Lambda) @ np.dot(X.T, targets)
+
+    def clip(self, pred):
+        if self.clip_min is not None or self.clip_max is not None:
+            return float(np.clip(pred,
+                                 self.clip_min if self.clip_min is not None else -np.inf,
+                                 self.clip_max if self.clip_max is not None else np.inf))
+        return pred
+
+    def new_user_predictions(self, item_ids):
+        if self.w is None:
+            raise RuntimeError("Need to call add_new_user() before calling new_user_predictions().")
+
+        i = [self.item_to_idx_[id] for id in item_ids]
+        bu = self.w[0]
+        P_ = self.w[1:]
+
+        pred = self.mu_ + self.bi_[i] + bu + self.Q_[i] @ P_
+        return self.clip(pred)
+
     def predict(self, user_id, item_id, must_exist=True) -> float:
         """Predict a rating for a user_id, item_id seen during training. If not seen in training, return biased means"""
         if self.user_to_idx_ is None:
@@ -270,13 +308,9 @@ class FunkSVD:
 
         u = self.user_to_idx_[user_id]
         i = self.item_to_idx_[item_id]
-        pred = self.mu_ + self.bu_[u] + self.bi_[i] + float(self.P_[u] @ self.Q_[i])
 
-        if self.clip_min is not None or self.clip_max is not None:
-            pred = float(np.clip(pred,
-                                 self.clip_min if self.clip_min is not None else -np.inf,
-                                 self.clip_max if self.clip_max is not None else  np.inf))
-        return float(pred)
+        pred = self.mu_ + self.bu_[u] + self.bi_[i] + float(self.P_[u] @ self.Q_[i])
+        return self.clip(pred)
 
     def factors(self):
         """

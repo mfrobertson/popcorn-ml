@@ -25,6 +25,10 @@ class SVDs:
         self.item_col = None
         self.rating_col = None
 
+        # New user data
+        self.lambda_0 = 0.1
+        self.m_0 = 20
+
 
 
     def fit(self, df: pd.DataFrame,
@@ -69,6 +73,35 @@ class SVDs:
         self.P_ = U[:, idx] @ np.sqrt(Sig)
         self.Q_ = V_t[idx, :].transpose() @ np.sqrt(Sig)
 
+    def add_new_user(self, items, ratings):
+        m = np.size(ratings)
+        item_idxs = [self.item_to_idx_[item] for item in items]
+
+        targets = ratings - self.mu_
+        Q_ = self.Q_.copy()[item_idxs]
+
+        lambda_ = self.lambda_0 * self.m_0 / m
+        lambdas = np.ones(self.k) * lambda_
+        Lambda = np.diag(lambdas)
+
+        self.P_new = np.linalg.inv(Q_.T @ Q_ + Lambda) @ np.dot(Q_.T, targets)
+
+    def clip(self, pred):
+        if self.clip_min is not None or self.clip_max is not None:
+            return float(np.clip(pred,
+                                 self.clip_min if self.clip_min is not None else -np.inf,
+                                 self.clip_max if self.clip_max is not None else np.inf))
+        return pred
+
+    def new_user_predictions(self, item_ids):
+        if self.P_new is None:
+            raise RuntimeError("Need to call add_new_user() before calling new_user_predictions().")
+
+        i = [self.item_to_idx_[id] for id in item_ids]
+
+        pred = self.mu_ + self.Q_[i] @ self.P_new
+        return self.clip(pred)
+
     def predict(self, user_id, item_id, must_exist=True) -> float:
         if self.user_to_idx_ is None:
             raise RuntimeError("Model not fitted. Call fit() first.")
@@ -84,9 +117,5 @@ class SVDs:
         user_idx = self.user_to_idx_[user_id]
         item_idx = self.item_to_idx_[item_id]
 
-        pred = np.dot(self.P_[user_idx], self.Q_[item_idx])
-        if self.clip_min is not None or self.clip_max is not None:
-            pred = float(np.clip(pred,
-                                 self.clip_min if self.clip_min is not None else -np.inf,
-                                 self.clip_max if self.clip_max is not None else  np.inf))
-        return pred + self.mu_
+        pred = np.dot(self.P_[user_idx], self.Q_[item_idx]) + self.mu_
+        return self.clip(pred)
