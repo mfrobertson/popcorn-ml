@@ -75,15 +75,24 @@ def log(message, dir_):
     f.write("[" + str(datetime.datetime.now()) + "] " + message + "\n")
     f.close()
 
-def find_best_param(params, RMSEs, tol=2e-3, select_min=True):
+def find_best_param(params, RMSEs, tol, selection):
+    if selection == "min_param":
+        func = np.min
+    elif selection == "max_param":
+        func = np.max
+    elif selection == "min":
+        func = None
+    else:
+        raise ValueError(f"{selection} is not a valid selection.")
     idx_sorted = np.argsort(RMSEs)
-    func = np.min if select_min else np.max
     params_sorted = params[idx_sorted]
     RMSEs_sorted = RMSEs[idx_sorted]
-    best_params = params_sorted[np.where(np.abs(RMSEs_sorted - RMSEs_sorted[0])/RMSEs_sorted[0] < tol)]
-    return func(best_params)
+    if func:
+        best_params = params_sorted[np.where(np.abs(RMSEs_sorted - RMSEs_sorted[0])/RMSEs_sorted[0] < tol)]
+        return func(best_params)
+    return params_sorted[0]
 
-def main(db_name, model_name, parameter, tol=2e-3, select_min=True, **kwargs):
+def main(db_name, model_name, parameter, tol=2e-3, selection="min", **kwargs):
     run_path = os.path.join(tune_path, db_name, model_name, parameter)
     log("---------------------------------", run_path)
     log(f"db: {db_name}, model: {model_name}, parameter: {parameter}, and kwargs: {kwargs}", run_path)
@@ -111,7 +120,7 @@ def main(db_name, model_name, parameter, tol=2e-3, select_min=True, **kwargs):
     np.save(os.path.join(run_path, "rmses.npy"), RMSEs)
     np.save(os.path.join(run_path, "params.npy"), params)
 
-    best_param = find_best_param(params, RMSEs, tol, select_min)
+    best_param = find_best_param(params, RMSEs, tol, selection)
     log(f"Best value for parameter: {parameter} = {best_param}", run_path)
 
     log("---------------------------------", run_path)
