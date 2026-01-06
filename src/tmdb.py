@@ -132,6 +132,11 @@ class TMDB:
             except KeyError:
                 print(res["id"], res["name"], res["media_type"])
 
+    def get_details_by_id(self, tmdb_id, media_type, language="en"):
+        req = requests.get(f"https://api.themoviedb.org/3/{media_type}/{tmdb_id}?api_key={self.API_KEY}&language={language}")
+        json = req.json()
+        return json
+
 
 if __name__ == "__main__":
 
