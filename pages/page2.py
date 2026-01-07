@@ -26,18 +26,14 @@ if "tmdb" not in st.session_state:
         st.session_state.tmdb.cc = locale.split("-")[1]  # Country code from users browser (regardless of location)
     if not st.session_state.tmdb.API_KEY:
         st.session_state.tmdb.API_KEY = st.secrets.get("TMDB_KEY")
-if "row" not in st.session_state:
-    st.session_state.row = 1
 
-for i in range(Ncol*Nrow):
-    if f"slider_{i}" not in st.session_state:
-        st.session_state[f"slider_{i}"] = 0
-
-if f"button_0_disabled" not in st.session_state:
+def initialise_rows():
     st.session_state[f"button_0_disabled"] = True
-for i in range(1, Nrow):
-    if f"button_{i}_disabled" not in st.session_state:
+    for i in range(0, Nrow):
         st.session_state[f"button_{i}_disabled"] = False
+    st.session_state.row = 0
+    for i in range(Ncol * Nrow):
+        st.session_state[f"slider_{i}"] = 0
 
 def rating_slider(col_idx):
     rating_values = [i for i in range(0,11)]
@@ -63,7 +59,6 @@ def more_button(row):
     if not st.session_state[f"button_{row}_disabled"]:
         st.button("More", key=f"more_{row}")
     else:
-        st.session_state[f"button_{row}_disabled"] = True
         st.session_state.row += 1
         if st.session_state.row < Nrow:
             show_ratings()
@@ -76,6 +71,14 @@ def show_ratings():
     ratings()
     more_button(row)
     st.session_state[f"button_{row}_disabled"] = True
+
+@st.fragment()
+def submit_button():
+    Nrows = st.session_state.row + 1
+    if st.button("Submit"):
+        print("Submitting...")
+        for iii in range(Ncol * Nrows):
+            print(st.session_state[f"slider_{iii}"])
 
 def rand_movie(col_idx):
     movieId = popular_movies[rand_indices[col_idx]]
@@ -90,7 +93,9 @@ rand_indices = np.random.choice(np.arange(N_pop), size=N_pop, replace=False)
 _tmdb = st.session_state.tmdb
 poster_size = "w154"
 
+initialise_rows()
 st.header("Movie Recommender", help="Personalised movie recommendations. Rate at least 5 movies (the more you rate the better the recommendations) and submit to display suggested films.")
 with st.container(border=True):
     st.subheader("Rate movies")
     show_ratings()
+submit_button()
