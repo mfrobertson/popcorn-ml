@@ -1,5 +1,6 @@
 import streamlit as st
 from src.tmdb import TMDB
+from src.st_helpers import display_image_with_hover
 
 
 def update_media_type():
@@ -30,57 +31,6 @@ if "trigger_toast" not in st.session_state:
 
 if "movie_index" not in st.session_state:
     st.session_state.movie_index = 0
-
-
-def display_image_with_hover(image_url, hover_text):
-    html = f"""
-    <style>
-    .tooltip {{
-      position: relative;
-      display: inline-block;
-      cursor: pointer;
-    }}
-
-    .tooltip .tooltiptext {{
-      visibility: hidden;
-      width: 120px;
-      background-color: black;
-      color: white;
-      text-align: center;
-      border-radius: 6px;
-      padding: 5px 0;
-      position: absolute;
-      z-index: 1;
-      top: 0%;
-      left: 50%;
-      margin-left: -60px;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }}
-
-    .tooltip:hover .tooltiptext {{
-      visibility: visible;
-      opacity: 1;
-    }}
-
-    .tooltip img {{
-      border-radius: 8px;             
-      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-      transition: transform 0.2s;
-    }}
-
-    .tooltip img:hover {{
-      transform: scale(1.05);       
-    }}
-
-    </style>
-    <div class='tooltip'>
-      <img src='{image_url}' alt='Image' style='margin-bottom:10px;'>
-      <span class='tooltiptext'>{hover_text}</span>
-    </div>
-    """
-    return st.markdown(html, unsafe_allow_html=True)
-
 
 if "tmdb" not in st.session_state:
     st.session_state.tmdb = TMDB(media_type="movie")
