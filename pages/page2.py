@@ -40,7 +40,7 @@ def rating_slider(col_idx):
     st.select_slider("Rating", rating_values, key=f"slider_{col_idx}", label_visibility="collapsed")
 
 @st.fragment()
-def dispay_movie_with_slider(col_idx):
+def display_movie_with_slider(col_idx):
     poster_path, name, date = rand_movie(col_idx)
     rated = True if st.session_state[f"slider_{col_idx}"] != 0 else False
     display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size),f"{name} ({date.split("-")[0]})", rated)
@@ -52,7 +52,7 @@ def ratings():
     for iii, col in enumerate(cols):
         with col:
             col_idx = iii + (st.session_state.row * Ncol)
-            dispay_movie_with_slider(col_idx)
+            display_movie_with_slider(col_idx)
 
 @st.fragment()
 def more_button(row):
