@@ -43,7 +43,7 @@ def rating_slider(col_idx):
 def dispay_movie_with_slider(col_idx):
     poster_path, name, date = rand_movie(col_idx)
     rated = True if st.session_state[f"slider_{col_idx}"] != 0 else False
-    display_image_with_hover(f"https://image.tmdb.org/t/p/{poster_size}/{poster_path}.png?api_key={_tmdb.API_KEY}",f"{name} ({date.split("-")[0]})", rated)
+    display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size),f"{name} ({date.split("-")[0]})", rated)
     rating_slider(col_idx)
 
 @st.fragment()

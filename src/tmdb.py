@@ -137,6 +137,9 @@ class TMDB:
         json = req.json()
         return json
 
+    def get_poster_fullpath(self, poster_path, size):
+        return f"https://image.tmdb.org/t/p/{size}/{poster_path}.png?api_key={self.API_KEY}"
+
 
 if __name__ == "__main__":
 
