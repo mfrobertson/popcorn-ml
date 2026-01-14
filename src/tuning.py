@@ -16,13 +16,13 @@ config_dir = src.config_path
 with open(os.path.join(config_dir, "tune.yaml"), 'r') as f:
     tune_config = yaml.safe_load(f)
 
-def RMSE(model, df_val, exits=True):
+def RMSE(model, df_val, exists=True):
     RMSE_sqr_unnorm = 0
     for row in df_val.itertuples():
         user = getattr(row, model.user_col)
         movie = getattr(row, model.item_col)
         rating = getattr(row, model.rating_col)
-        pred = model.predict(user, movie, exits)
+        pred = model.predict(user, movie, exists)
         RMSE_sqr_unnorm += (rating - pred) ** 2
     return np.sqrt(RMSE_sqr_unnorm/len(df_val))
 
