@@ -11,10 +11,14 @@ def get_image(url: str) -> bytes:
     req = requests.get(url)
     return bytes_to_base64(req.content)
 
-def display_image_with_hover(image_url, hover_text, rated=False):
+def display_image_with_hover(image_url, hover_text, rated=False, caching=False):
     state_class = "poster-rated" if rated else "poster-unrated"
 
-    img_base64 = get_image(image_url)
+    if caching:
+        img_base64 = get_image(image_url)
+        image_src =  f"<img src='data:image/png;base64,{img_base64}' style='margin-bottom:10px;'>"
+    else:
+        image_src = image_url
 
     html = f"""
     <style>
@@ -71,7 +75,7 @@ def display_image_with_hover(image_url, hover_text, rated=False):
 
     </style>
     <div class='tooltip {state_class}'>
-      <img src='data:image/png;base64,{img_base64}' style='margin-bottom:10px;'>
+      <img src={image_src} style='margin-bottom:10px;'>
       <span class='tooltiptext'>{hover_text}</span>
     </div>
     """
