@@ -81,28 +81,30 @@ def show_ratings():
 def submit_button():
     Nrows = st.session_state.row + 1
     if st.button("Submit"):
-        print("Submitting...")
         user_data = {int(popular_tmdbIds[rand_indices[col_idx]]): st.session_state[f"slider_{col_idx}"] / 2 for col_idx in np.arange(Ncol * Nrows) if st.session_state[f"slider_{col_idx}"] != 0}
         movieIds, pred_ratings = get_predictions(user_data)
         show_results(movieIds, pred_ratings)
 
 @st.fragment()
 def show_results(movieIds, pred_ratings):
-    sorted_idx = np.argsort(pred_ratings)[::-1]
-    cols = st.columns(Ncol)
-    col_idx = 0
-    for col in cols:
-        poster_path = None
-        with col:
-            # If movie not in tmdb database, move on to next
-            while poster_path is None:
-                try:
-                    poster_path, name, date = get_movie(int(sorted_idx[col_idx]), movieIds)
-                except KeyError:
-                    col_idx += 1
-            display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})",False)
-            st.text(pred_ratings[sorted_idx[col_idx]])
-            col_idx += 1
+    with st.container(border=True):
+        st.markdown("#### Personalised Recommendations")
+        sorted_idx = np.argsort(pred_ratings)[::-1]
+        cols = st.columns(Ncol)
+        col_idx = 0
+        for col in cols:
+            poster_path = None
+            with col:
+                # If movie not in tmdb database, move on to next
+                while poster_path is None:
+                    try:
+                        poster_path, name, date = get_movie(int(sorted_idx[col_idx]), movieIds)
+                    except KeyError:
+                        col_idx += 1
+                display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})",False)
+                st.markdown("######")
+                col_idx += 1
+
 
 def setup_model(model_type, database, clip=False):
     tune_path = os.path.join(src.tune_path, database, model_type)
@@ -156,8 +158,7 @@ _tmdb = st.session_state.tmdb
 poster_size = "w154"
 
 initialise_rows()
-st.header("Movie Recommender", help="Personalised movie recommendations. Rate at least 5 movies (the more you rate the better the recommendations) and submit to display suggested films.")
 with st.container(border=True):
-    st.subheader("Rate movies")
+    st.markdown("#### Rate Movies", help="Personalised movie recommendations. Rate at least 5 movies (the more you rate the better the recommendations) and submit to display suggested films.")
     show_ratings()
 submit_button()
