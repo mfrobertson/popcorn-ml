@@ -33,6 +33,12 @@ def get_data(db_name):
     df_val = pd.read_csv(val_path)
     return df_train, df_val
 
+def get_cols(db_name):
+    user_col = tune_config[db_name]["user_col"]
+    item_col = tune_config[db_name]["item_col"]
+    rating_col = tune_config[db_name]["rating_col"]
+    return user_col, item_col, rating_col
+
 def get_params(db_name, model_name, parameter):
     config = tune_config[db_name][model_name]
     params_min = config[parameter]["min"]
@@ -102,9 +108,7 @@ def main(db_name, model_name, parameter, tol=2e-3, selection="min", **kwargs):
     Model = import_Model(model_name)
     model_kw = get_model_keywords(db_name, model_name, **kwargs)
 
-    user_col = tune_config[db_name]["user_col"]
-    item_col = tune_config[db_name]["item_col"]
-    rating_col = tune_config[db_name]["rating_col"]
+    user_col, item_col, rating_col = get_cols(db_name)
 
     log(f"Parameters: {model_kw}", run_path)
     log(f"Grid for parameter: {parameter} = {params}", run_path)
