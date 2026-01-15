@@ -275,9 +275,9 @@ class FunkSVD:
 
     def clip(self, pred):
         if self.clip_min is not None or self.clip_max is not None:
-            return float(np.clip(pred,
+            return np.clip(pred,
                                  self.clip_min if self.clip_min is not None else -np.inf,
-                                 self.clip_max if self.clip_max is not None else np.inf))
+                                 self.clip_max if self.clip_max is not None else np.inf)
         return pred
 
     def new_user_predictions(self, item_ids):
