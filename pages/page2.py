@@ -5,6 +5,8 @@ import src
 import os
 import numpy as np
 from src.st_helpers import display_image_with_hover
+from src.model import svds, funk_svd
+import yaml
 
 
 src_dir = src.src_path
@@ -17,7 +19,10 @@ def get_data():
     df_mappings = pd.read_json(os.path.join(src_dir, "data", "movie_mappings.json"))
     df_pop = pd.read_json(os.path.join(src_dir, "data", "popular_movies.json"))
     df_pop = df_pop.merge(df_mappings, on="movieId", how="left")
-    return df_mappings, df_pop
+    tmdbId_to_movieId = dict(zip(df_mappings["tmdbId"], df_mappings["movieId"]))
+    movieId_to_tmdbId = dict(zip(df_mappings["movieId"], df_mappings["tmdbId"]))
+    # movieId_to_imdbId = dict(zip(df_mappings["movieId"], df_mappings["imdbId"]))
+    return df_mappings, df_pop, tmdbId_to_movieId, movieId_to_tmdbId
 
 if "tmdb" not in st.session_state:
     st.session_state.tmdb = TMDB(media_type="movie")
@@ -77,17 +82,74 @@ def submit_button():
     Nrows = st.session_state.row + 1
     if st.button("Submit"):
         print("Submitting...")
-        for iii in range(Ncol * Nrows):
-            print(st.session_state[f"slider_{iii}"])
+        user_data = {int(popular_tmdbIds[rand_indices[col_idx]]): st.session_state[f"slider_{col_idx}"] / 2 for col_idx in np.arange(Ncol * Nrows) if st.session_state[f"slider_{col_idx}"] != 0}
+        movieIds, pred_ratings = get_predictions(user_data)
+        show_results(movieIds, pred_ratings)
 
-def rand_movie(col_idx):
-    movieId = popular_movies[rand_indices[col_idx]]
-    movie_json = _tmdb.get_details_by_id(movieId, "movie")
+@st.fragment()
+def show_results(movieIds, pred_ratings):
+    sorted_idx = np.argsort(pred_ratings)[::-1]
+    cols = st.columns(Ncol)
+    col_idx = 0
+    for col in cols:
+        poster_path = None
+        with col:
+            # If movie not in tmdb database, move on to next
+            while poster_path is None:
+                try:
+                    poster_path, name, date = get_movie(int(sorted_idx[col_idx]), movieIds)
+                except KeyError:
+                    col_idx += 1
+            display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})",False)
+            st.text(pred_ratings[sorted_idx[col_idx]])
+            col_idx += 1
+
+def setup_model(model_type, database, clip=False):
+    tune_path = os.path.join(src.tune_path, database, model_type)
+    with open(os.path.join(tune_path, "params.yml"), 'r') as f:
+        params = yaml.safe_load(f)
+    with open(os.path.join(tune_path, "item_to_idx.yml"), 'r') as f:
+        item_to_idx = yaml.safe_load(f)
+    if clip:
+        model = svds.SVDs(clip_min=0.5, clip_max=5, **params)
+    else:
+        model = svds.SVDs(**params)
+    model.item_to_idx_ = item_to_idx
+    model.Q_ = np.load(os.path.join(tune_path, "Q.npy"))
+    model.mu_ = np.load(os.path.join(tune_path, "mu.npy"))
+    return model
+
+def get_predictions(user_data, model_type="SVDs", database="ml-small"):
+    model = setup_model(model_type, database)
+    items = [id_mapping(tmdbId=tmdbId) for tmdbId in list(user_data.keys())]
+    model.add_new_user(items, list(user_data.values()))
+    movieIds = list(model.item_to_idx_.keys())
+    return movieIds, model.new_user_predictions(movieIds)
+
+def get_movie(idx, movie_list=None):
+    if movie_list is None:
+        tmdbId = popular_tmdbIds[idx]
+    else:
+        movieId = movie_list[idx]
+        tmdbId = id_mapping(movieId=movieId)
+    if tmdbId == "nan":
+        raise KeyError("No tmdbId exists for this movie.")
+    movie_json = _tmdb.get_details_by_id(tmdbId, "movie")
     return movie_json["poster_path"], movie_json["title"], movie_json["release_date"]
 
-df_mappings, df_pop = get_data()
-popular_movies = df_pop["tmdbId"]
-N_pop = np.size(popular_movies)
+def rand_movie(col_idx):
+    return get_movie(rand_indices[col_idx])
+
+def id_mapping(tmdbId=None, movieId=None):
+    if tmdbId is None and movieId is None:
+        raise ValueError("Must specify either tmdbId or movieId")
+    if tmdbId is not None:
+        return tmdbId_to_movieId[tmdbId]
+    return movieId_to_tmdbId[movieId]
+
+df_mappings, df_pop, tmdbId_to_movieId, movieId_to_tmdbId = get_data()
+popular_tmdbIds = df_pop["tmdbId"]
+N_pop = np.size(popular_tmdbIds)
 rand_indices = np.random.choice(np.arange(N_pop), size=N_pop, replace=False)
 
 _tmdb = st.session_state.tmdb
