@@ -1,5 +1,5 @@
+import numpy as np
 from narwhals import to_native
-
 import src
 import os
 import src.tuning as tune
@@ -9,20 +9,35 @@ config_dir = src.config_path
 with open(os.path.join(config_dir, "tune.yaml"), 'r') as f:
     tune_config = yaml.safe_load(f)
 
-def save_params(db_name, model_name, params):
+def outdir(db_name, model_name):
     tune_dir = src.tune_path
-    outdir = os.path.join(tune_dir, db_name, model_name)
-    with open(os.path.join(outdir, "params.yml"), 'w') as outfile:
-        yaml.dump(to_native(params), outfile)
+    return os.path.join(tune_dir, db_name, model_name)
+
+def save_params(db_name, model_name, params):
+    outfile = os.path.join(outdir(db_name, model_name), "params.yml")
+    with open(outfile, 'w') as f:
+        yaml.dump(to_native(params), f)
 
 def to_native(obj):
     if isinstance(obj, dict):
-        return {k: to_native(v) for k, v in obj.items()}
+        return {to_native(k): to_native(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
         return [to_native(v) for v in obj]
     if hasattr(obj, "item"):  # numpy scalar
         return obj.item()
     return obj
+
+def run_and_save_model(db_name, model_name, **model_kw):
+    Model = tune.import_Model(model_name)
+    model = Model(**model_kw)
+    df_train, df_val = tune.get_data(db_name)
+    user_col, item_col, rating_col = tune.get_cols(db_name)
+    model.fit(df_train, user_col=user_col, item_col=item_col, rating_col=rating_col)
+    outpath = outdir(db_name, model_name)
+    np.save(os.path.join(outpath, "Q.npy"), model.Q_)
+    np.save(os.path.join(outpath, "mu.npy"), model.mu_)
+    with open(os.path.join(outpath, "item_to_idx.yml"), 'w') as f:
+        yaml.dump(to_native(model.item_to_idx_), f)
 
 def collab_runner(db_name, model_name):
     print(f"Collaborative tuning for db: {db_name}, with model: {model_name}.")
@@ -38,9 +53,10 @@ def collab_runner(db_name, model_name):
         kwargs[param] = best_param
 
     save_params(db_name, model_name, kwargs)
+    run_and_save_model(db_name, model_name, **kwargs)
 
 
 if __name__ == "__main__":
     db_name = "ml-small"
-    model_name = "FunkSVD"
+    model_name = "SVDs"
     collab_runner(db_name, model_name)
