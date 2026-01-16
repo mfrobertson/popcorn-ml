@@ -44,4 +44,8 @@ ml-small:
       default: 30
       tol: 2e-3
       selection: "min_param"
+ml-large:
+  user_col: "userId"
+  item_col: "movieId"
+  rating_col: "rating"
 
