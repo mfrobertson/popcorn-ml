@@ -1,4 +1,7 @@
 import streamlit as st
+
+from src.model.funk_svd import FunkSVD
+from src.model.svds import SVDs
 from src.tmdb import TMDB
 import pandas as pd
 import src
@@ -105,23 +108,33 @@ def show_results(movieIds, pred_ratings):
                 st.markdown("######")
                 col_idx += 1
 
+def get_Model(model_type):
+    if model_type == "FunkSVD":
+        return funk_svd.FunkSVD
+    if model_type == "SVDs":
+        return svds.SVDs
+    else:
+        raise Exception(f"Unknown model type: {model_type}")
 
 def setup_model(model_type, database, clip=False):
+    Model = get_Model(model_type)
     tune_path = os.path.join(src.tune_path, database, model_type)
     with open(os.path.join(tune_path, "params.yml"), 'r') as f:
         params = yaml.safe_load(f)
     with open(os.path.join(tune_path, "item_to_idx.yml"), 'r') as f:
         item_to_idx = yaml.safe_load(f)
     if clip:
-        model = svds.SVDs(clip_min=0.5, clip_max=5, **params)
+        model = Model(clip_min=0.5, clip_max=5, **params)
     else:
-        model = svds.SVDs(**params)
+        model = Model(**params)
     model.item_to_idx_ = item_to_idx
     model.Q_ = np.load(os.path.join(tune_path, "Q.npy"))
     model.mu_ = np.load(os.path.join(tune_path, "mu.npy"))
+    if model_type == "FunkSVD":
+        model.bi_ = np.load(os.path.join(tune_path, "bi.npy"))
     return model
 
-def get_predictions(user_data, model_type="SVDs", database="ml-small"):
+def get_predictions(user_data, model_type="FunkSVD", database="ml-small"):
     model = setup_model(model_type, database)
     items = [id_mapping(tmdbId=tmdbId) for tmdbId in list(user_data.keys())]
     model.add_new_user(items, list(user_data.values()))

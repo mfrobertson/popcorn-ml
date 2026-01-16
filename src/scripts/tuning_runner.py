@@ -36,6 +36,8 @@ def run_and_save_model(db_name, model_name, **model_kw):
     outpath = outdir(db_name, model_name)
     np.save(os.path.join(outpath, "Q.npy"), model.Q_)
     np.save(os.path.join(outpath, "mu.npy"), model.mu_)
+    if model_name == "FunkSVD":
+        np.save(os.path.join(outpath, "bi.npy"), model.bi_)
     with open(os.path.join(outpath, "item_to_idx.yml"), 'w') as f:
         yaml.dump(to_native(model.item_to_idx_), f)
 
@@ -58,5 +60,5 @@ def collab_runner(db_name, model_name):
 
 if __name__ == "__main__":
     db_name = "ml-small"
-    model_name = "SVDs"
+    model_name = "FunkSVD"
     collab_runner(db_name, model_name)
