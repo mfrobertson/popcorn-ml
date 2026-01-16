@@ -134,7 +134,7 @@ def setup_model(model_type, database, clip=False):
         model.bi_ = np.load(os.path.join(tune_path, "bi.npy"))
     return model
 
-def get_predictions(user_data, model_type="FunkSVD", database="ml-small"):
+def get_predictions(user_data, model_type="FunkSVD", database="ml-large"):
     model = setup_model(model_type, database)
     items = [id_mapping(tmdbId=tmdbId) for tmdbId in list(user_data.keys())]
     model.add_new_user(items, list(user_data.values()))
