@@ -14,10 +14,10 @@ def outdir(db_name, model_name):
     return os.path.join(tune_dir, db_name, model_name)
 
 def save_params(db_name, model_name, params):
-    outfile_dir = outdir(db_name, model_name)
-    if not os.path.isdir(outfile_dir):
-        os.makedirs(outfile_dir)
-    outfile = os.path.join(outfile_dir, "params.yml")
+    models_path = os.path.join(src.models_path, db_name, model_name)
+    if not os.path.isdir(models_path):
+        os.makedirs(models_path)
+    outfile = os.path.join(models_path, "params.yml")
     with open(outfile, 'w') as f:
         yaml.dump(to_native(params), f)
 
@@ -36,15 +36,15 @@ def run_and_save_model(db_name, model_name, **model_kw):
     df_train, df_val = tune.get_data(db_name)
     user_col, item_col, rating_col = tune.get_cols(db_name)
     model.fit(df_train, user_col=user_col, item_col=item_col, rating_col=rating_col)
-    outpath = outdir(db_name, model_name)
+    models_path = os.path.join(src.models_path, db_name, model_name)
     print("Saving Q")
-    np.save(os.path.join(outpath, "Q.npy"), model.Q_)
+    np.save(os.path.join(models_path, "Q.npy"), model.Q_)
     print("Saving mu")
-    np.save(os.path.join(outpath, "mu.npy"), model.mu_)
+    np.save(os.path.join(models_path, "mu.npy"), model.mu_)
     if model_name == "FunkSVD":
         print("Saving bi")
-        np.save(os.path.join(outpath, "bi.npy"), model.bi_)
-    with open(os.path.join(outpath, "item_to_idx.yml"), 'w') as f:
+        np.save(os.path.join(models_path, "bi.npy"), model.bi_)
+    with open(os.path.join(models_path, "item_to_idx.yml"), 'w') as f:
         print("Saving item_to_index")
         yaml.dump(to_native(model.item_to_idx_), f)
 
