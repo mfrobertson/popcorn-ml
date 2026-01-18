@@ -177,7 +177,7 @@ N_pop = np.size(popular_tmdbIds)
 rand_indices = np.random.choice(np.arange(N_pop), size=N_pop, replace=False)
 
 _tmdb = st.session_state.tmdb
-poster_size = "w154"
+poster_size = "w342"
 
 initialise_rows()
 with st.container(border=True):
