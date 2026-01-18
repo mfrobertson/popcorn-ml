@@ -1,7 +1,4 @@
 import streamlit as st
-
-from src.model.funk_svd import FunkSVD
-from src.model.svds import SVDs
 from src.tmdb import TMDB
 import pandas as pd
 import src
