@@ -127,20 +127,20 @@ def get_Model(model_type):
 
 def setup_model(model_type, database, clip=False):
     Model = get_Model(model_type)
-    tune_path = os.path.join(src.tune_path, database, model_type)
-    with open(os.path.join(tune_path, "params.yml"), 'r') as f:
+    models_path = os.path.join(src.models_path, database, model_type)
+    with open(os.path.join(models_path, "params.yml"), 'r') as f:
         params = yaml.safe_load(f)
-    with open(os.path.join(tune_path, "item_to_idx.yml"), 'r') as f:
+    with open(os.path.join(models_path, "item_to_idx.yml"), 'r') as f:
         item_to_idx = yaml.safe_load(f)
     if clip:
         model = Model(clip_min=0.5, clip_max=5, **params)
     else:
         model = Model(**params)
     model.item_to_idx_ = item_to_idx
-    model.Q_ = np.load(os.path.join(tune_path, "Q.npy"))
-    model.mu_ = np.load(os.path.join(tune_path, "mu.npy"))
+    model.Q_ = np.load(os.path.join(models_path, "Q.npy"))
+    model.mu_ = np.load(os.path.join(models_path, "mu.npy"))
     if model_type == "FunkSVD":
-        model.bi_ = np.load(os.path.join(tune_path, "bi.npy"))
+        model.bi_ = np.load(os.path.join(models_path, "bi.npy"))
     return model
 
 def get_predictions(user_data, model_type="FunkSVD", database="ml-new"):
