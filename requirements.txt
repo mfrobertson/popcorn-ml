@@ -1,3 +1,7 @@
 streamlit
 requests
 dotenv
+numba
+scipy
+pandas
+pyyaml

@@ -1,0 +1,4 @@
+lr: 0.012
+n_epochs: 21
+n_factors: 66
+reg: 0.027
