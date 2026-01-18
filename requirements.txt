@@ -4,3 +4,4 @@ dotenv
 numba
 scipy
 pandas
+yaml
