@@ -28,3 +28,18 @@ ml-large:
     cols: ['userId', 'movieId']
     min_values: [11, 6]
   sql_query: 'SELECT userId, movieId, rating, timestamp FROM ratings ORDER BY userId ASC, timestamp ASC'
+ml-new:
+  ratios:
+    train: 0.9
+  split_by_group:
+    active: true
+    col: 'userId'
+    max_value: 20000
+  present_all_sets:
+    active: true
+    cols: ['movieId']
+  drop_rare_rows:
+    active: true
+    cols: ['userId', 'movieId']
+    min_values: [11, 6]
+  sql_query: 'SELECT userId, movieId, rating, timestamp FROM ratings ORDER BY userId ASC, timestamp ASC'

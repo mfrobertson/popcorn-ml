@@ -67,8 +67,8 @@ def more_button(row):
     if not st.session_state[f"button_{row}_disabled"]:
         st.button("More", key=f"more_{row}")
     else:
-        st.session_state.row += 1
         if st.session_state.row < Nrow:
+            st.session_state.row += 1
             show_ratings()
         else:
             st.toast("Max number of movies reached.")
@@ -82,8 +82,11 @@ def show_ratings():
 
 def enough_data(user_data):
     N_ratings = len(user_data)
-    if N_ratings < Nrow:
+    min_ratings = 5
+    if N_ratings < min_ratings:
         st.toast(f"Rate at least {5 - N_ratings} more movies.")
+        return False
+    return True
 
 @st.fragment()
 def submit_button():
@@ -143,7 +146,7 @@ def setup_model(model_type, database, clip=False):
         model.bi_ = np.load(os.path.join(tune_path, "bi.npy"))
     return model
 
-def get_predictions(user_data, model_type="FunkSVD", database="ml-large"):
+def get_predictions(user_data, model_type="FunkSVD", database="ml-new"):
     model = setup_model(model_type, database)
     items = [id_mapping(tmdbId=tmdbId) for tmdbId in list(user_data.keys())]
     model.add_new_user(items, list(user_data.values()))

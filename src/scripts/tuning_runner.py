@@ -50,7 +50,7 @@ def run_and_save_model(db_name, model_name, **model_kw):
 
 def collab_runner(db_name, model_name):
     print(f"Collaborative tuning for db: {db_name}, with model: {model_name}.")
-    if db_name == "ml-large":
+    if db_name == "ml-large" or db_name == "ml-new":
         print(f"Skipping tuning for {db_name}, using ml-small tuning results instead...")
         ml_small_outfile = os.path.join(outdir("ml-small", model_name), "params.yml")
         with open(ml_small_outfile, 'r') as f:
@@ -74,6 +74,6 @@ def collab_runner(db_name, model_name):
 
 
 if __name__ == "__main__":
-    db_name = "ml-large"
+    db_name = "ml-new"
     model_name = "FunkSVD"
     collab_runner(db_name, model_name)

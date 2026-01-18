@@ -129,7 +129,7 @@ def check_config(db_name):
     assert db_name in split_config
     config = split_config[db_name]
     # assert sum(config["ratios"].values()) == 1
-    keys = ["split_by_group", "present_all_sets", "sql_query"]
+    keys = ["split_by_group", "present_all_sets", "sql_query", "drop_rare_rows"]
     for key in keys:
         assert key in config
 

@@ -14,8 +14,16 @@ IMDB_EXT = "imdb"
 ML_EXT = "ml"
 SQL_EXT = "sql"
 
-def ml_get(small=True):
-    dir_name_orig = "ml-latest-small" if small else "ml-latest"
+def ml_get(type):
+    if type == "small":
+        dir_name_orig = "ml-latest-small"
+    elif type == "latest":
+        dir_name_orig = "ml-latest"
+    elif type == "new":
+        dir_name_orig = "ml-32m"
+    else:
+        raise ValueError(f"Unknown type for movieLens dataset: {type}.")
+
     url = f"https://files.grouplens.org/datasets/movielens/{dir_name_orig}.zip"
 
     ml_dir = DATA_PATH
@@ -27,7 +35,7 @@ def ml_get(small=True):
     data_zip = zipfile.ZipFile(BytesIO(data_get.content))
     data_zip.extractall(ml_dir)
 
-    dir_name = "ml-small" if small else "ml-large"
+    dir_name = f"ml-{type}"
     os.rename(os.path.join(ml_dir, dir_name_orig), os.path.join(ml_dir, dir_name))
     print(f"Completed downloading {dir_name} data.")
 
@@ -100,10 +108,9 @@ def import_data(*names):
     for name in names:
         if name == "imdb":
             imdb_get()
-        elif name == "ml-small":
-            ml_get()
-        elif name == "ml-large":
-            ml_get(False)
+        elif name[:2] == "ml":
+            type = name.split("-")[1]
+            ml_get(type)
         else:
             raise ValueError(f"Unknown data source: {name}")
         load_to_sql(name)

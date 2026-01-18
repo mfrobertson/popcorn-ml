@@ -48,4 +48,8 @@ ml-large:
   user_col: "userId"
   item_col: "movieId"
   rating_col: "rating"
+ml-new:
+  user_col: "userId"
+  item_col: "movieId"
+  rating_col: "rating"
 
