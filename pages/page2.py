@@ -4,7 +4,7 @@ import pandas as pd
 import src
 import os
 import numpy as np
-from src.st_helpers import display_image_with_hover
+from src.st_helpers import display_image_with_hover, display_image_with_hover_rated
 from src.model import svds, funk_svd
 import yaml
 
@@ -48,7 +48,7 @@ def rating_slider(col_idx):
 def display_movie_with_slider(col_idx):
     poster_path, name, date, _ = rand_movie(col_idx)
     rated = True if st.session_state[f"slider_{col_idx}"] != 0 else False
-    display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size),f"{name} ({date.split("-")[0]})", rated)
+    display_image_with_hover_rated(_tmdb.get_poster_fullpath(poster_path, poster_size),f"{name} ({date.split("-")[0]})", rated)
     rating_slider(col_idx)
 
 @st.fragment()
@@ -113,7 +113,7 @@ def show_results(movieIds, pred_ratings, user_data):
                             raise KeyError("Suggested movie already rated by user")
                     except KeyError:
                         col_idx += 1
-                display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})",False)
+                display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})")
                 st.markdown("######")
                 col_idx += 1
 
