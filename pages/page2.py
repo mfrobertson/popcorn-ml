@@ -49,7 +49,7 @@ def rating_slider(col_idx):
 
 @st.fragment()
 def display_movie_with_slider(col_idx):
-    poster_path, name, date = rand_movie(col_idx)
+    poster_path, name, date, _ = rand_movie(col_idx)
     rated = True if st.session_state[f"slider_{col_idx}"] != 0 else False
     display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size),f"{name} ({date.split("-")[0]})", rated)
     rating_slider(col_idx)
@@ -80,16 +80,22 @@ def show_ratings():
     more_button(row)
     st.session_state[f"button_{row}_disabled"] = True
 
+def enough_data(user_data):
+    N_ratings = len(user_data)
+    if N_ratings < Nrow:
+        st.toast(f"Rate at least {5 - N_ratings} more movies.")
+
 @st.fragment()
 def submit_button():
     Nrows = st.session_state.row + 1
     if st.button("Submit"):
         user_data = {int(popular_tmdbIds[rand_indices[col_idx]]): st.session_state[f"slider_{col_idx}"] / 2 for col_idx in np.arange(Ncol * Nrows) if st.session_state[f"slider_{col_idx}"] != 0}
-        movieIds, pred_ratings = get_predictions(user_data)
-        show_results(movieIds, pred_ratings)
+        if enough_data(user_data):
+            movieIds, pred_ratings = get_predictions(user_data)
+            show_results(movieIds, pred_ratings, user_data)
 
 @st.fragment()
-def show_results(movieIds, pred_ratings):
+def show_results(movieIds, pred_ratings, user_data):
     with st.container(border=True):
         st.markdown("#### Personalised Recommendations")
         sorted_idx = np.argsort(pred_ratings)[::-1]
@@ -98,10 +104,13 @@ def show_results(movieIds, pred_ratings):
         for col in cols:
             poster_path = None
             with col:
-                # If movie not in tmdb database, move on to next
+                # If movie not in tmdb database, or already rated, move on to next
                 while poster_path is None:
                     try:
-                        poster_path, name, date = get_movie(int(sorted_idx[col_idx]), movieIds)
+                        poster_path, name, date, tmdbId = get_movie(int(sorted_idx[col_idx]), movieIds)
+                        if tmdbId in list(user_data.keys()):
+                            poster_path = None
+                            raise KeyError("Suggested movie already rated by user")
                     except KeyError:
                         col_idx += 1
                 display_image_with_hover(_tmdb.get_poster_fullpath(poster_path, poster_size), f"{name} ({date.split("-")[0]})",False)
@@ -150,7 +159,7 @@ def get_movie(idx, movie_list=None):
     if tmdbId == "nan":
         raise KeyError("No tmdbId exists for this movie.")
     movie_json = _tmdb.get_details_by_id(tmdbId, "movie")
-    return movie_json["poster_path"], movie_json["title"], movie_json["release_date"]
+    return movie_json["poster_path"], movie_json["title"], movie_json["release_date"], tmdbId
 
 def rand_movie(col_idx):
     return get_movie(rand_indices[col_idx])
@@ -159,8 +168,8 @@ def id_mapping(tmdbId=None, movieId=None):
     if tmdbId is None and movieId is None:
         raise ValueError("Must specify either tmdbId or movieId")
     if tmdbId is not None:
-        return tmdbId_to_movieId[tmdbId]
-    return movieId_to_tmdbId[movieId]
+        return int(tmdbId_to_movieId[tmdbId])
+    return int(movieId_to_tmdbId[movieId])
 
 df_mappings, df_pop, tmdbId_to_movieId, movieId_to_tmdbId = get_data()
 popular_tmdbIds = df_pop["tmdbId"]
