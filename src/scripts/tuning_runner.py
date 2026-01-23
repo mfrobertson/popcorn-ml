@@ -39,14 +39,21 @@ def run_and_save_model(db_name, model_name, **model_kw):
     models_path = os.path.join(src.models_path, db_name, model_name)
     print("Saving Q")
     np.save(os.path.join(models_path, "Q.npy"), model.Q_)
+    print("Saving P")
+    np.save(os.path.join(models_path, "P.npy"), model.P_)
     print("Saving mu")
     np.save(os.path.join(models_path, "mu.npy"), model.mu_)
     if model_name == "FunkSVD":
         print("Saving bi")
         np.save(os.path.join(models_path, "bi.npy"), model.bi_)
+        print("Saving bu")
+        np.save(os.path.join(models_path, "bu.npy"), model.bu_)
     with open(os.path.join(models_path, "item_to_idx.yml"), 'w') as f:
         print("Saving item_to_index")
         yaml.dump(to_native(model.item_to_idx_), f)
+    with open(os.path.join(models_path, "user_to_idx.yml"), 'w') as f:
+        print("Saving user_to_index")
+        yaml.dump(to_native(model.user_to_idx_), f)
 
 def collab_runner(db_name, model_name):
     print(f"Collaborative tuning for db: {db_name}, with model: {model_name}.")
