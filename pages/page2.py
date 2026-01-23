@@ -5,8 +5,7 @@ import src
 import os
 import numpy as np
 from src.st_helpers import display_image_with_hover, display_image_with_hover_rated
-from src.model import svds, funk_svd
-import yaml
+from src.model import get_model
 
 
 src_dir = src.src_path
@@ -117,34 +116,8 @@ def show_results(movieIds, pred_ratings, user_data):
                 st.markdown("######")
                 col_idx += 1
 
-def get_Model(model_type):
-    if model_type == "FunkSVD":
-        return funk_svd.FunkSVD
-    if model_type == "SVDs":
-        return svds.SVDs
-    else:
-        raise Exception(f"Unknown model type: {model_type}")
-
-def setup_model(model_type, database, clip=False):
-    Model = get_Model(model_type)
-    models_path = os.path.join(src.models_path, database, model_type)
-    with open(os.path.join(models_path, "params.yml"), 'r') as f:
-        params = yaml.safe_load(f)
-    with open(os.path.join(models_path, "item_to_idx.yml"), 'r') as f:
-        item_to_idx = yaml.safe_load(f)
-    if clip:
-        model = Model(clip_min=0.5, clip_max=5, **params)
-    else:
-        model = Model(**params)
-    model.item_to_idx_ = item_to_idx
-    model.Q_ = np.load(os.path.join(models_path, "Q.npy"))
-    model.mu_ = np.load(os.path.join(models_path, "mu.npy"))
-    if model_type == "FunkSVD":
-        model.bi_ = np.load(os.path.join(models_path, "bi.npy"))
-    return model
-
 def get_predictions(user_data, model_type="FunkSVD", database="ml-new"):
-    model = setup_model(model_type, database)
+    model = get_model(model_type, database)
     items = [id_mapping(tmdbId=tmdbId) for tmdbId in list(user_data.keys())]
     model.add_new_user(items, list(user_data.values()))
     movieIds = list(model.item_to_idx_.keys())
